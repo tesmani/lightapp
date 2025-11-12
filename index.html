@@ -1,95 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Universal Light Controller</title>
-  <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: #111;
-      color: white;
-      font-family: sans-serif;
-      transition: background-color 0.3s ease;
-    }
-    button, input[type="range"] {
-      margin: 10px;
-      font-size: 18px;
-      padding: 10px 20px;
-      border-radius: 10px;
-      border: none;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      cursor: pointer;
-    }
-    button:active {
-      background: #0056b3;
-    }
-    .slider {
-      width: 200px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Light Home</title>
+<style>
+  /* Reset */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    background-color:#111;
+    color:white;
+    text-align:center;
+    transition: background 0.5s ease, box-shadow 0.5s ease;
+  }
+
+  h1 {
+    font-size: 32px;
+    margin-bottom: 25px;
+  }
+
+  /* Toggle Button */
+  .toggle-btn {
+    position: relative;
+    width: 120px;
+    height: 60px;
+    background: #555;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+    margin-bottom: 20px;
+  }
+
+  .toggle-btn.active {
+    background: #ffdd33;
+    box-shadow: 0 0 30px #ffdd33, 0 0 60px #ffdd33;
+  }
+
+  .toggle-circle {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 50px;
+    height: 50px;
+    background: white;
+    border-radius: 50%;
+    transition: left 0.3s ease, background 0.3s ease;
+  }
+
+  .toggle-btn.active .toggle-circle {
+    left: 65px;
+    background: #fffbe6;
+  }
+
+  /* Status text */
+  #status {
+    font-size: 22px;
+    margin-bottom: 25px;
+    font-weight: bold;
+    text-shadow: 0 0 10px #fff;
+  }
+</style>
 </head>
 <body>
-  <h2>💡 Universal Light Controller</h2>
-  <button id="toggleBtn">Turn On</button>
-  <input id="brightness" class="slider" type="range" min="10" max="100" value="100" />
-  <p id="status">Flashlight OFF</p>
+<h1>💡 Smart Home Light</h1>
 
-  <script>
-    let stream;
-    let torchOn = false;
-    let usingScreen = false;
-    const button = document.getElementById("toggleBtn");
-    const brightness = document.getElementById("brightness");
-    const status = document.getElementById("status");
+<div id="toggleBtn" class="toggle-btn">
+  <div class="toggle-circle"></div>
+</div>
+<p id="status">Light OFF</p>
 
-    async function toggleTorch() {
-      try {
-        if (!stream) {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        }
+<script>
+let stream;
+let torchOn = false;
+let usingScreen = false;
 
-        const track = stream.getVideoTracks()[0];
-        const capabilities = track.getCapabilities();
+const toggleBtn = document.getElementById("toggleBtn");
+const status = document.getElementById("status");
 
-        if ("torch" in capabilities) {
-          torchOn = !torchOn;
-          await track.applyConstraints({ advanced: [{ torch: torchOn }] });
-          status.textContent = torchOn ? "Flashlight ON" : "Flashlight OFF";
-          button.textContent = torchOn ? "Turn Off" : "Turn On";
-          usingScreen = false;
-        } else {
-          // Fallback to screen simulation
-          toggleScreenLight();
-        }
-      } catch (err) {
-        // If access fails, fallback to screen simulation
-        toggleScreenLight();
-      }
+// Toggle the light function
+async function toggleTorch(forceState = null){
+  try {
+    if(!stream){
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:"environment" } });
     }
+    const track = stream.getVideoTracks()[0];
+    const capabilities = track.getCapabilities();
 
-    function toggleScreenLight() {
-      torchOn = !torchOn;
-      usingScreen = true;
-      document.body.style.backgroundColor = torchOn ? `rgba(255, 255, 255, ${brightness.value / 100})` : "#111";
-      status.textContent = torchOn ? "Screen Light ON" : "Screen Light OFF";
-      button.textContent = torchOn ? "Turn Off" : "Turn On";
+    if('torch' in capabilities){
+      torchOn = forceState !== null ? forceState : !torchOn;
+      await track.applyConstraints({advanced:[{torch:torchOn}]});
+      usingScreen=false;
+      updateUI();
+    } else {
+      toggleScreenLight(forceState);
     }
+  } catch(err){
+    toggleScreenLight(forceState);
+  }
+}
 
-    brightness.addEventListener("input", () => {
-      if (usingScreen && torchOn) {
-        document.body.style.backgroundColor = `rgba(255, 255, 255, ${brightness.value / 100})`;
-      }
-    });
+// Fallback for screen
+function toggleScreenLight(forceState=null){
+  torchOn = forceState !== null ? forceState : !torchOn;
+  usingScreen = true;
+  updateUI();
+}
 
-    button.addEventListener("click", toggleTorch);
-  </script>
+// Update UI
+function updateUI(){
+  if(torchOn){
+    toggleBtn.classList.add("active");
+    status.textContent = usingScreen ? "Screen Light ON" : "Flashlight ON";
+    document.body.style.backgroundColor = "#ffdd33";
+    document.body.style.boxShadow = "0 0 50px #ffdd33 inset";
+  } else {
+    toggleBtn.classList.remove("active");
+    status.textContent = usingScreen ? "Screen Light OFF" : "Flashlight OFF";
+    document.body.style.backgroundColor = "#111";
+    document.body.style.boxShadow = "none";
+  }
+}
+
+// Toggle button click
+toggleBtn.addEventListener("click", ()=>toggleTorch());
+</script>
 </body>
 </html>
