@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phone Light Control</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Universal Light Controller</title>
   <style>
     body {
       display: flex;
@@ -14,31 +14,41 @@
       background-color: #111;
       color: white;
       font-family: sans-serif;
+      transition: background-color 0.3s ease;
     }
-    button {
-      padding: 15px 30px;
+    button, input[type="range"] {
       margin: 10px;
       font-size: 18px;
-      border: none;
+      padding: 10px 20px;
       border-radius: 10px;
-      background-color: #007bff;
+      border: none;
+    }
+    button {
+      background: #007bff;
       color: white;
       cursor: pointer;
     }
     button:active {
-      background-color: #0056b3;
+      background: #0056b3;
+    }
+    .slider {
+      width: 200px;
     }
   </style>
 </head>
 <body>
-  <h2>📱 Phone Light Controller</h2>
+  <h2>💡 Universal Light Controller</h2>
   <button id="toggleBtn">Turn On</button>
+  <input id="brightness" class="slider" type="range" min="10" max="100" value="100" />
+  <p id="status">Flashlight OFF</p>
 
   <script>
     let stream;
     let torchOn = false;
-
+    let usingScreen = false;
     const button = document.getElementById("toggleBtn");
+    const brightness = document.getElementById("brightness");
+    const status = document.getElementById("status");
 
     async function toggleTorch() {
       try {
@@ -49,18 +59,35 @@
         const track = stream.getVideoTracks()[0];
         const capabilities = track.getCapabilities();
 
-        if ('torch' in capabilities) {
+        if ("torch" in capabilities) {
           torchOn = !torchOn;
           await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+          status.textContent = torchOn ? "Flashlight ON" : "Flashlight OFF";
           button.textContent = torchOn ? "Turn Off" : "Turn On";
-          document.body.style.backgroundColor = torchOn ? "#f5b500" : "#111";
+          usingScreen = false;
         } else {
-          alert("Torch not supported on this device/browser.");
+          // Fallback to screen simulation
+          toggleScreenLight();
         }
       } catch (err) {
-        alert("Error: " + err.message);
+        // If access fails, fallback to screen simulation
+        toggleScreenLight();
       }
     }
+
+    function toggleScreenLight() {
+      torchOn = !torchOn;
+      usingScreen = true;
+      document.body.style.backgroundColor = torchOn ? `rgba(255, 255, 255, ${brightness.value / 100})` : "#111";
+      status.textContent = torchOn ? "Screen Light ON" : "Screen Light OFF";
+      button.textContent = torchOn ? "Turn Off" : "Turn On";
+    }
+
+    brightness.addEventListener("input", () => {
+      if (usingScreen && torchOn) {
+        document.body.style.backgroundColor = `rgba(255, 255, 255, ${brightness.value / 100})`;
+      }
+    });
 
     button.addEventListener("click", toggleTorch);
   </script>
